@@ -13,3 +13,4 @@ def assert_binary(var):
 def assert_same_problem(x, y):
     if x._problem is not y._problem:
         raise CitrusError('Variables must be associated with the same problem.')
+    return x # return for use in reduce(assert_same_problem, (x, y, z))

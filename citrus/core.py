@@ -1,8 +1,7 @@
+from functools import reduce
 import pulp
 from .errors import assert_binary, assert_same_problem
 
-def minimum(*xs, name=None):
-    pass
 
 class Problem(pulp.LpProblem):
     def __init__(self, *args ,**kwargs):
@@ -76,3 +75,23 @@ def logical_or(x: Variable, y: Variable):
     model.addConstraint(z >= x, 'constraint{}'.format(model._synth_var()))
     model.addConstraint(z >= y, 'constraint{}'.format(model._synth_var()))
     return z
+
+def minimum(*xs: Variable, name=None):
+    if len(xs) == 1:
+        return xs[0]
+    reduce(assert_same_problem, xs)
+    model = xs[0]._problem
+    m = pulp.LpVariable('{}_{}'.format(name or 'min', model._synth_var()), cat=pulp.LpContinuous)
+    for x in xs:
+        model.addConstraint(m <= x, 'constraint{}'.format(model._synth_var()))
+    return m
+
+def maximum(*xs: Variable, name=None):
+    if len(xs) == 1:
+        return xs[0]
+    reduce(assert_same_problem, xs)
+    model = xs[0]._problem
+    m = pulp.LpVariable('{}_{}'.format(name or 'max', model._synth_var()), cat=pulp.LpContinuous)
+    for x in xs:
+        model.addConstraint(m >= x, 'constraint{}'.format(model._synth_var()))
+    return m

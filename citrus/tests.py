@@ -1,6 +1,6 @@
 import pytest
 import pulp
-from .core import Problem, negate, logical_and, logical_or
+from .core import Problem, Variable, negate, logical_and, logical_or, minimum, maximum
 from .errors import NonBinaryVariableError, CitrusError
 
 def test_that_negate_produces_negated_variable():
@@ -94,6 +94,53 @@ def test_that_vars_from_diff_problems_raise_error():
     with pytest.raises(CitrusError):
         logical_and(x, y)
 
-# test Variable.from_lp_var still works in constraints.
+def test_that_from_lp_var_works():
+    p = Problem('anding with self', pulp.LpMinimize)
+    t = pulp.LpVariable('t', cat=pulp.LpBinary)
+    f = p.make_var('f', cat=pulp.LpBinary)
+    t = Variable.from_lp_var(t, p)
 
-# test that minimum is truly the min
+    tf = logical_and(t, f)
+    p.addConstraint(t == 1)
+    p.addConstraint(f == 0)
+    p.solve()
+    assert pulp.LpStatus[p.status] == 'Optimal'
+    assert tf.value() == 0
+
+def test_that_minimum_is_truly_min():
+    p = Problem('minimum', pulp.LpMaximize)
+
+    x = p.make_var('x', cat=pulp.LpContinuous)
+    p.addConstraint(x <= 52)
+
+    y = p.make_var('y', cat=pulp.LpContinuous)
+    p.addConstraint(y <= 12)
+
+    z = p.make_var('z', cat=pulp.LpContinuous)
+    p.addConstraint(z <= 15)
+
+    m = minimum(x, y, z)
+    p.setObjective(x + y + z + m)
+
+    p.solve()
+    assert pulp.LpStatus[p.status] == 'Optimal'
+    assert m.value() == 12
+
+def test_that_maximum_is_truly_min():
+    p = Problem('maximum', pulp.LpMinimize)
+
+    x = p.make_var('x', cat=pulp.LpContinuous)
+    p.addConstraint(x >= 52)
+
+    y = p.make_var('y', cat=pulp.LpContinuous)
+    p.addConstraint(y >= 12)
+
+    z = p.make_var('z', cat=pulp.LpContinuous)
+    p.addConstraint(z >= 15)
+
+    m = maximum(x, y, z)
+    p.setObjective(x + y + z + m)
+
+    p.solve()
+    assert pulp.LpStatus[p.status] == 'Optimal'
+    assert m.value() == 52
