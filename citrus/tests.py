@@ -1,6 +1,6 @@
 import pytest
 import pulp
-from .core import Problem, Variable, negate, logical_and, logical_or, minimum, maximum
+from .core import Problem, Variable, negate, logical_and, logical_or, minimum, maximum, logical_xor, implies
 from .errors import NonBinaryVariableError, CitrusError
 
 def test_that_negate_produces_negated_variable():
@@ -82,6 +82,10 @@ def test_that_funcs_throws_on_non_binary_variable():
         logical_and(x, y)
     with pytest.raises(NonBinaryVariableError):
         logical_or(x, y)
+    with pytest.raises(NonBinaryVariableError):
+        logical_xor(x, y)
+    with pytest.raises(NonBinaryVariableError):
+        implies(x, y)
 
 def test_that_vars_from_diff_problems_raise_error():
     a = Problem('problem a', pulp.LpMinimize)
@@ -93,6 +97,10 @@ def test_that_vars_from_diff_problems_raise_error():
         logical_or(x, y)
     with pytest.raises(CitrusError):
         logical_and(x, y)
+    with pytest.raises(CitrusError):
+        logical_xor(x, y)
+    with pytest.raises(CitrusError):
+        implies(x, y)
 
 def test_that_from_lp_var_works():
     p = Problem('anding with self', pulp.LpMinimize)
@@ -144,3 +152,39 @@ def test_that_maximum_is_truly_min():
     p.solve()
     assert pulp.LpStatus[p.status] == 'Optimal'
     assert m.value() == 52
+
+def test_logical_xor():
+    p = Problem('logical_xor tests', pulp.LpMinimize)
+    t = p.make_var('t', cat=pulp.LpBinary)
+    f = p.make_var('f', cat=pulp.LpBinary)
+
+    tt = logical_xor(t, t)
+    tf = logical_xor(t, f)
+    ft = logical_xor(f, t)
+    ff = logical_xor(f, f)
+    p.addConstraint(t == 1)
+    p.addConstraint(f == 0)
+    p.solve()
+    assert pulp.LpStatus[p.status] == 'Optimal'
+    assert tt.value() == 0
+    assert tf.value() == 1
+    assert ft.value() == 1
+    assert ff.value() == 0
+
+def test_implies():
+    p = Problem('implies tests', pulp.LpMinimize)
+    t = p.make_var('t', cat=pulp.LpBinary)
+    f = p.make_var('f', cat=pulp.LpBinary)
+
+    tt = implies(t, t)
+    tf = implies(t, f)
+    ft = implies(f, t)
+    ff = implies(f, f)
+    p.addConstraint(t == 1)
+    p.addConstraint(f == 0)
+    p.solve()
+    assert pulp.LpStatus[p.status] == 'Optimal'
+    assert tt.value() == 1
+    assert tf.value() == 0
+    assert ft.value() == 1
+    assert ff.value() == 1

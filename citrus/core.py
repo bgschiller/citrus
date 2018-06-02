@@ -76,6 +76,35 @@ def logical_or(x: Variable, y: Variable):
     model.addConstraint(z >= y, 'constraint{}'.format(model._synth_var()))
     return z
 
+def logical_xor(x: Variable, y: Variable):
+    assert_same_problem(x, y)
+    assert_binary(x)
+    assert_binary(y)
+
+    model = x._problem
+
+    z = model.make_var('({} XOR {})_{}'.format(x.name, y.name, model._synth_var()), cat=pulp.LpBinary)
+    model.addConstraint(z <= x + y)
+    model.addConstraint(z >= x - y)
+    model.addConstraint(z >= y - x)
+    model.addConstraint(z <= 2 - x - y)
+
+    return z
+
+def implies(x: Variable, y: Variable):
+    assert_same_problem(x, y)
+    assert_binary(x)
+    assert_binary(y)
+
+    model = x._problem
+
+    z = model.make_var('({} implies {})_{}'.format(x.name, y.name, model._synth_var()), cat=pulp.LpBinary)
+    model.addConstraint(z <= 1 - x + y)
+    model.addConstraint(z >= 1 - x)
+    model.addConstraint(z >= y)
+    return z
+
+
 def minimum(*xs: Variable, name=None):
     if len(xs) == 1:
         return xs[0]
