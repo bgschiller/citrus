@@ -1,10 +1,5 @@
 import pulp
-
-def logical_or(x, y):
-    pass
-
-def logical_and(x, y):
-    pass
+from .errors import assert_binary, assert_same_problem
 
 def minimum(*xs, name=None):
     pass
@@ -17,7 +12,7 @@ class Problem(pulp.LpProblem):
     def make_var(self, *args, **kwargs):
         return Variable(*args, **kwargs, problem=self)
 
-    def synthetic_var_name(self):
+    def _synth_var(self):
         name = str(self._synth_var_ix)
         self._synth_var_ix += 1
         return name
@@ -45,8 +40,39 @@ class Variable(pulp.LpVariable):
         return lp_var
 
 def negate(x: Variable):
-    assert x.isBinary(), 'Only binary variables can be negated'
+    assert_binary(x)
     problem = x._problem
-    y = pulp.LpVariable('(NOT {})_{}'.format(x.name, problem.synthetic_var_name()), cat=pulp.LpBinary)
-    problem.addConstraint(y == 1 - x, 'constraint_{}'.format(problem.synthetic_var_name()))
+    y = problem.make_var('(NOT {})_{}'.format(x.name, problem._synth_var()), cat=pulp.LpBinary)
+    problem.addConstraint(y == 1 - x, 'constraint_{}'.format(problem._synth_var()))
     return y
+
+def logical_and(x: Variable, y: Variable):
+    """
+    produce a variable that represents x && y
+
+    That variable can then be used in constraints and the objective func.
+    """
+    assert_same_problem(x, y)
+    assert_binary(x)
+    assert_binary(y)
+
+    model = x._problem
+
+    z = model.make_var('({} AND {})_{}'.format(x.name, y.name, model._synth_var()), cat=pulp.LpBinary)
+    model.addConstraint(z >= x + y - 1, 'constraint{}'.format(model._synth_var()))
+    model.addConstraint(z <= x, 'constraint{}'.format(model._synth_var()))
+    model.addConstraint(z <= y, 'constraint{}'.format(model._synth_var()))
+    return z
+
+def logical_or(x: Variable, y: Variable):
+    assert_same_problem(x, y)
+    assert_binary(x)
+    assert_binary(y)
+
+    model = x._problem
+
+    z = model.make_var('({} AND {})_{}'.format(x.name, y.name, model._synth_var()), cat=pulp.LpBinary)
+    model.addConstraint(z <= x + y, 'constraint{}'.format(model._synth_var()))
+    model.addConstraint(z >= x, 'constraint{}'.format(model._synth_var()))
+    model.addConstraint(z >= y, 'constraint{}'.format(model._synth_var()))
+    return z
