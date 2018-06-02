@@ -38,11 +38,21 @@ class Variable(pulp.LpVariable):
         lp_var._problem = problem
         return lp_var
 
+    def __or__(self, other):
+        return logical_or(self, other)
+
+    def __and__(self, other):
+        return logical_and(self, other)
+
+    def __xor__(self, other):
+        return logical_xor(self, other)
+
+
 def negate(x: Variable):
     assert_binary(x)
     problem = x._problem
     y = problem.make_var('(NOT {})_{}'.format(x.name, problem._synth_var()), cat=pulp.LpBinary)
-    problem.addConstraint(y == 1 - x, 'constraint_{}'.format(problem._synth_var()))
+    problem.addConstraint(y == 1 - x)
     return y
 
 def logical_and(x: Variable, y: Variable):
@@ -58,9 +68,9 @@ def logical_and(x: Variable, y: Variable):
     model = x._problem
 
     z = model.make_var('({} AND {})_{}'.format(x.name, y.name, model._synth_var()), cat=pulp.LpBinary)
-    model.addConstraint(z >= x + y - 1, 'constraint{}'.format(model._synth_var()))
-    model.addConstraint(z <= x, 'constraint{}'.format(model._synth_var()))
-    model.addConstraint(z <= y, 'constraint{}'.format(model._synth_var()))
+    model.addConstraint(z >= x + y - 1)
+    model.addConstraint(z <= x)
+    model.addConstraint(z <= y)
     return z
 
 def logical_or(x: Variable, y: Variable):
@@ -71,9 +81,9 @@ def logical_or(x: Variable, y: Variable):
     model = x._problem
 
     z = model.make_var('({} AND {})_{}'.format(x.name, y.name, model._synth_var()), cat=pulp.LpBinary)
-    model.addConstraint(z <= x + y, 'constraint{}'.format(model._synth_var()))
-    model.addConstraint(z >= x, 'constraint{}'.format(model._synth_var()))
-    model.addConstraint(z >= y, 'constraint{}'.format(model._synth_var()))
+    model.addConstraint(z <= x + y)
+    model.addConstraint(z >= x)
+    model.addConstraint(z >= y)
     return z
 
 def logical_xor(x: Variable, y: Variable):
@@ -112,7 +122,7 @@ def minimum(*xs: Variable, name=None):
     model = xs[0]._problem
     m = pulp.LpVariable('{}_{}'.format(name or 'min', model._synth_var()), cat=pulp.LpContinuous)
     for x in xs:
-        model.addConstraint(m <= x, 'constraint{}'.format(model._synth_var()))
+        model.addConstraint(m <= x)
     return m
 
 def maximum(*xs: Variable, name=None):
@@ -122,5 +132,5 @@ def maximum(*xs: Variable, name=None):
     model = xs[0]._problem
     m = pulp.LpVariable('{}_{}'.format(name or 'max', model._synth_var()), cat=pulp.LpContinuous)
     for x in xs:
-        model.addConstraint(m >= x, 'constraint{}'.format(model._synth_var()))
+        model.addConstraint(m >= x)
     return m

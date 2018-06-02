@@ -14,3 +14,7 @@ name = "pypi"
 
 pylint = "*"
 pytest = "*"
+
+[scripts]
+
+test = "pytest citrus/tests.py"
