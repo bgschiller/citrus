@@ -2,6 +2,10 @@
 
 Intended to work like [PuLP](https://github.com/coin-or/pulp), but with a few convenience functions thrown in.
 
+```
+pip install citrus
+```
+
 # Comparisons
 
 ## ANDing two variables
