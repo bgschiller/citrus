@@ -13,7 +13,7 @@ from setuptools import find_packages, setup, Command
 
 # Package meta-data.
 NAME = 'citrus'
-DESCRIPTION = 'A more humane interface to PuLP.'
+DESCRIPTION = 'A more convenient interface to doing Binary Linear Programming with PuLP'
 URL = 'https://github.com/bgschiller/citrus'
 EMAIL = 'bgschiller@gmail.com'
 AUTHOR = 'Brian Schiller'
