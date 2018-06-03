@@ -7,7 +7,10 @@ python:
   - "3.6-dev" # 3.6 development branch
   - "3.7-dev" # 3.7 development branch
   - "nightly" # currently points to 3.7-dev
-script: pytest citrus/tests.py
+script:
+  - pip install pipenv --upgrade
+  - pipenv install --dev --skip-lock
+  - pytest citrus/tests.py
 deploy:
   provider: pypi
   user: bgschiller
