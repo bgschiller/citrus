@@ -56,7 +56,7 @@ p = citrus.Problem('or example', pulp.LpMinimize)
 
 x = p.make_var('x', cat=pulp.LpBinary)
 y = p.make_var('y', cat=pulp.LpBinary)
-x_or_y = x & y
+x_or_y = x | y
 # alternatively, x_or_y = citrus.logical_or(x, y)
 ```
 
