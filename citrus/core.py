@@ -120,7 +120,7 @@ def minimum(*xs: Variable, name=None):
         return xs[0]
     reduce(assert_same_problem, xs)
     model = xs[0]._problem
-    m = pulp.LpVariable('{}_{}'.format(name or 'min', model._synth_var()), cat=pulp.LpContinuous)
+    m = model.make_var('{}_{}'.format(name or 'min', model._synth_var()), cat=pulp.LpContinuous)
     for x in xs:
         model.addConstraint(m <= x)
     return m
@@ -130,7 +130,7 @@ def maximum(*xs: Variable, name=None):
         return xs[0]
     reduce(assert_same_problem, xs)
     model = xs[0]._problem
-    m = pulp.LpVariable('{}_{}'.format(name or 'max', model._synth_var()), cat=pulp.LpContinuous)
+    m = model.make_var('{}_{}'.format(name or 'max', model._synth_var()), cat=pulp.LpContinuous)
     for x in xs:
         model.addConstraint(m >= x)
     return m
