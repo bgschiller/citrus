@@ -47,6 +47,10 @@ class Variable(pulp.LpVariable):
     def __xor__(self, other):
         return logical_xor(self, other)
 
+    def __add__(self, other):
+        s = super().__add__(other)
+        return self.from_lp_var(s, self._problem)
+
 
 def negate(x: Variable):
     assert_binary(x)

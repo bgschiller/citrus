@@ -188,3 +188,15 @@ def test_implies():
     assert tf.value() == 0
     assert ft.value() == 1
     assert ff.value() == 1
+
+def test_closed_under_addition():
+    """
+    adding two Variables should produce a Variable
+    (not an LpVariable, which loses its reference to the Problem)
+    """
+    p = Problem('closed under addition', pulp.LpMinimize)
+    a = p.make_var('a', cat=pulp.LpContinuous)
+    b = p.make_var('b', cat=pulp.LpContinuous)
+
+    c = a + b
+    assert c._problem == p, "c should retain the problem from a, b"
