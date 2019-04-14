@@ -2,7 +2,7 @@
 
 Intended to work like [PuLP](https://github.com/coin-or/pulp), but with a few convenience functions thrown in.
 
-```
+```bash
 pip install citrus
 ```
 
@@ -10,7 +10,7 @@ pip install citrus
 
 ## ANDing two variables
 
-```
+```python
 # without citrus
 import pulp
 p = pulp.LpProblem('and example', pulp.LpMinimize)
@@ -23,7 +23,7 @@ model.addConstraint(x_and_y <= x)
 model.addConstraint(x_and_y <= y)
 ```
 
-```
+```python
 # with citrus
 import citrus
 p = citrus.Problem('and example', pulp.LpMinimize)
@@ -36,7 +36,7 @@ x_and_y = x & y
 
 ## ORing two variables
 
-```
+```python
 # without citrus
 import pulp
 p = pulp.LpProblem('or example', pulp.LpMinimize)
@@ -49,7 +49,7 @@ model.addConstraint(x_or_y >= x)
 model.addConstraint(x_or_y >= y)
 ```
 
-```
+```python
 # with citrus
 import citrus
 p = citrus.Problem('or example', pulp.LpMinimize)
@@ -62,7 +62,7 @@ x_or_y = x | y
 
 ## Negating a variable
 
-```
+```python
 # without citrus
 p = pulp.LpProblem('negation test', pulp.LpMinimize)
 
@@ -71,7 +71,7 @@ not_x = pulp.LpVariable('not_x', cat=pulp.LpBinary)
 p.addConstraint(not_x == 1 - x)
 ```
 
-```
+```python
 # With citrus
 import citrus
 p = citrus.Problem('negation test', pulp.LpMinimize)
@@ -84,7 +84,7 @@ not_x = citrus.negate(x)
 
 Sometimes, you'll have many variables that you want to AND or OR together:
 
-```
+```python
 p = citrus.Problem('vacation at some point', pulp.Maximize)
 
 vacation_in_x_month = [
