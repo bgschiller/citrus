@@ -189,14 +189,30 @@ def test_implies():
     assert ft.value() == 1
     assert ff.value() == 1
 
-def test_closed_under_addition():
+def test_addition_retains_problem_reference():
     """
-    adding two Variables should produce a Variable
-    (not an LpVariable, which loses its reference to the Problem)
+    adding two Variables should produce an AffineExpression
+    (not an LpAffineExpression, which loses its reference to the Problem)
     """
-    p = Problem('closed under addition', pulp.LpMinimize)
+    p = Problem('works with addition', pulp.LpMinimize)
     a = p.make_var('a', cat=pulp.LpContinuous)
     b = p.make_var('b', cat=pulp.LpContinuous)
 
     c = a + b
     assert c._problem == p, "c should retain the problem from a, b"
+
+def test_maximum_operates_on_affine_expr():
+    p = Problem('maximum test', pulp.LpMinimize)
+    a = p.make_var('a', cat=pulp.LpContinuous)
+    b = p.make_var('b', cat=pulp.LpContinuous)
+    c = 2 * a + b
+
+    p.addConstraint((a + b + c) <= 12, 'a + b + c<= 12')
+    p.addConstraint(a >= 0, 'pos a')
+    p.addConstraint(b >= 0, 'pos b')
+    p.addConstraint(c >= 0, 'pos c')
+
+    largest = maximum(a, b, c)
+    p.setObjective(largest)
+    p.solve()
+    assert pulp.LpStatus[p.status] == 'Optimal'

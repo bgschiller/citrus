@@ -1,6 +1,6 @@
 from functools import reduce
 import pulp
-from .errors import assert_binary, assert_same_problem
+from .errors import assert_binary, assert_same_problem, MissingProblemReference
 
 
 class Problem(pulp.LpProblem):
@@ -27,6 +27,24 @@ class Problem(pulp.LpProblem):
             return { k: self._walk_dicts(v) for k, v in ds.items() }
         raise ValueError('Expected a dict or LpVariable. received {}'.format(ds))
 
+class AffineExpression(pulp.LpAffineExpression):
+    def __init__(self, *args, **kwargs):
+        if 'problem' in kwargs:
+            problem = kwargs.pop('problem')
+        elif len(args) > 0 and isinstance(args[0], (Variable, AffineExpression)):
+            problem = args[0]._problem
+        else:
+            raise MissingProblemReference('Cannot create AffineExpression without a reference to the problem')
+        super().__init__(*args, **kwargs)
+        self._problem = problem
+
+    def copy(self):
+        return AffineExpression(self)
+
+    def emptyCopy(self):
+        return AffineExpression(problem=self._problem)
+
+
 class Variable(pulp.LpVariable):
     def __init__(self, *args, **kwargs):
         self._problem = kwargs.pop('problem')
@@ -47,10 +65,30 @@ class Variable(pulp.LpVariable):
     def __xor__(self, other):
         return logical_xor(self, other)
 
-    def __add__(self, other):
-        s = super().__add__(other)
-        return self.from_lp_var(s, self._problem)
+    # -- copied from LpVariable, but with a different constructor
+    def __neg__(self):
+        return - AffineExpression(self)
 
+    def __add__(self, other):
+        return AffineExpression(self) + other
+
+    def __radd__(self, other):
+        return AffineExpression(self) + other
+
+    def __sub__(self, other):
+        return AffineExpression(self) - other
+
+    def __rsub__(self, other):
+        return other - AffineExpression(self)
+
+    def __mul__(self, other):
+        return AffineExpression(self) * other
+
+    def __rmul__(self, other):
+        return AffineExpression(self) * other
+
+    def __div__(self, other):
+        return AffineExpression(self)/other
 
 def negate(x: Variable):
     assert_binary(x)

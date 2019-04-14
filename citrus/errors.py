@@ -6,6 +6,9 @@ class CitrusError(pulp.PulpError):
 class NonBinaryVariableError(CitrusError):
     pass
 
+class MissingProblemReference(CitrusError):
+    pass
+
 def assert_binary(var):
     if not var.isBinary():
         raise NonBinaryVariableError(var.name)
