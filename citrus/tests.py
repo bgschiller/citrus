@@ -1,7 +1,7 @@
 import pytest
 import pulp
 from .core import Problem, Variable, negate, logical_and, logical_or, minimum, maximum, logical_xor, implies
-from .errors import NonBinaryVariableError, CitrusError
+from .errors import NonBinaryVariableError, CitrusError, assert_binary
 
 def test_that_negate_produces_negated_variable():
     p = Problem('negation test', pulp.LpMinimize)
@@ -216,3 +216,11 @@ def test_maximum_operates_on_affine_expr():
     p.setObjective(largest)
     p.solve()
     assert pulp.LpStatus[p.status] == 'Optimal'
+
+def test_constants_count_as_binary():
+    p = Problem('constants binary', pulp.LpMinimize)
+    a = p.make_var('a', cat=pulp.LpBinary)
+    a.setInitialValue(1)
+    a.fixValue()
+    assert_binary(a)
+

@@ -10,8 +10,9 @@ class MissingProblemReference(CitrusError):
     pass
 
 def assert_binary(var):
-    if not var.isBinary():
-        raise NonBinaryVariableError(var.name)
+    if var.isBinary(): return
+    if var.isConstant() and (var.value() == 1 or var.value() == 0): return
+    raise NonBinaryVariableError(var.name)
 
 def assert_same_problem(x, y):
     if x._problem is not y._problem:
