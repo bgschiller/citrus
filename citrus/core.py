@@ -119,35 +119,43 @@ def negate(x: Variable):
     problem.addConstraint(y == 1 - x)
     return y
 
-def logical_and(x: Variable, y: Variable):
+def logical_and(*xs):
     """
     produce a variable that represents x && y
 
     That variable can then be used in constraints and the objective func.
     """
-    assert_same_problem(x, y)
-    assert_binary(x)
-    assert_binary(y)
+    if len(xs) == 1:
+        return xs[0]
+
+    assert_same_problem(*xs)
+    for x in xs:
+        assert_binary(x)
 
     model = x._problem
 
-    z = model.make_var('({} AND {})_{}'.format(x.name, y.name, model._synth_var()), cat=pulp.LpBinary)
-    model.addConstraint(z >= x + y - 1)
-    model.addConstraint(z <= x)
-    model.addConstraint(z <= y)
+    name = '(' + '_AND_'.join(x.name for x in xs) + f')_{model._synth_var()}'
+    z = model.make_var(name, cat=pulp.LpBinary)
+    model.addConstraint(z >= pulp.lpSum(xs) - len(xs) + 1)
+    for x in xs:
+        model.addConstraint(z <= x)
     return z
 
-def logical_or(x: Variable, y: Variable):
-    assert_same_problem(x, y)
-    assert_binary(x)
-    assert_binary(y)
+def logical_or(*xs):
+    if len(xs) == 1:
+        return xs[0]
+
+    assert_same_problem(*xs)
+    for x in xs:
+        assert_binary(x)
 
     model = x._problem
 
-    z = model.make_var('({} AND {})_{}'.format(x.name, y.name, model._synth_var()), cat=pulp.LpBinary)
-    model.addConstraint(z <= x + y)
-    model.addConstraint(z >= x)
-    model.addConstraint(z >= y)
+    name = '(' + '_OR_'.join(x.name for x in xs) + f')_{model._synth_var()}'
+    z = model.make_var(name, cat=pulp.LpBinary)
+    model.addConstraint(z <= pulp.lpSum(xs))
+    for x in xs:
+        model.addConstraint(z >= x)
     return z
 
 def logical_xor(x: Variable, y: Variable):
@@ -182,7 +190,7 @@ def implies(x: Variable, y: Variable):
 def minimum(*xs: Variable, name=None):
     if len(xs) == 1:
         return xs[0]
-    reduce(assert_same_problem, xs)
+    assert_same_problem(*xs)
     model = xs[0]._problem
     m = model.make_var('{}_{}'.format(name or 'min', model._synth_var()), cat=pulp.LpContinuous)
     for x in xs:
@@ -192,7 +200,7 @@ def minimum(*xs: Variable, name=None):
 def maximum(*xs: Variable, name=None):
     if len(xs) == 1:
         return xs[0]
-    reduce(assert_same_problem, xs)
+    assert_same_problem(*xs)
     model = xs[0]._problem
     m = model.make_var('{}_{}'.format(name or 'max', model._synth_var()), cat=pulp.LpContinuous)
     for x in xs:

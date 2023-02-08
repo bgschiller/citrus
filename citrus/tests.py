@@ -115,6 +115,53 @@ def test_that_from_lp_var_works():
     assert pulp.LpStatus[p.status] == 'Optimal'
     assert tf.value() == 0
 
+def test_more_than_two_args_or():
+    p = Problem('logical_or tests', pulp.LpMinimize)
+    t = p.make_var('t', cat=pulp.LpBinary)
+    t2 = p.make_var('t2', cat=pulp.LpBinary)
+    f = p.make_var('f', cat=pulp.LpBinary)
+    f2 = p.make_var('f2', cat=pulp.LpBinary)
+
+    ttt = logical_or(t, t, t2)
+    tff = logical_or(t, f, f2)
+    ftf = logical_or(f, t, f2)
+    ff2f = logical_or(f, f, f2)
+
+    p.addConstraint(t == 1)
+    p.addConstraint(f == 0)
+    p.addConstraint(t2 == 1)
+    p.addConstraint(f2 == 0)
+    p.solve()
+    assert pulp.LpStatus[p.status] == 'Optimal'
+    assert ttt.value() == 1
+    assert tff.value() == 1
+    assert ftf.value() == 1
+    assert ff2f.value() == 0
+
+def test_more_than_two_args_and():
+    p = Problem('logical_and tests', pulp.LpMinimize)
+    t = p.make_var('t', cat=pulp.LpBinary)
+    t2 = p.make_var('t2', cat=pulp.LpBinary)
+    f = p.make_var('f', cat=pulp.LpBinary)
+    f2 = p.make_var('f2', cat=pulp.LpBinary)
+
+    ttt = logical_and(t, t, t2)
+    tff = logical_and(t, f, f2)
+    ftf = logical_and(f, t, f2)
+    ff2f = logical_and(f, f, f2)
+
+    p.addConstraint(t == 1)
+    p.addConstraint(f == 0)
+    p.addConstraint(t2 == 1)
+    p.addConstraint(f2 == 0)
+    p.solve()
+    assert pulp.LpStatus[p.status] == 'Optimal'
+    assert ttt.value() == 1
+    assert tff.value() == 0
+    assert ftf.value() == 0
+    assert ff2f.value() == 0
+
+
 def test_that_minimum_is_truly_min():
     p = Problem('minimum', pulp.LpMaximize)
 
@@ -134,7 +181,7 @@ def test_that_minimum_is_truly_min():
     assert pulp.LpStatus[p.status] == 'Optimal'
     assert m.value() == 12
 
-def test_that_maximum_is_truly_min():
+def test_that_maximum_is_truly_max():
     p = Problem('maximum', pulp.LpMinimize)
 
     x = p.make_var('x', cat=pulp.LpContinuous)

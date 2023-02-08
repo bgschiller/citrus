@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "citrus"
-version = "0.0.4"
+version = "0.0.5"
 description = "A more convenient interface to doing Binary Linear Programming with PuLP"
 authors = ["Brian Schiller <bgschiller@gmail.com>"]
 license = "MIT"
