@@ -38,6 +38,9 @@ class AffineExpression(pulp.LpAffineExpression):
         super().__init__(*args, **kwargs)
         self._problem = problem
 
+    def __abs__(self):
+        return abs_value(self)
+
     def copy(self):
         return AffineExpression(self)
 
@@ -65,6 +68,9 @@ class Variable(pulp.LpVariable):
     def __xor__(self, other):
         return logical_xor(self, other)
 
+    def __abs__(self):
+        return abs_value(self)
+
     # -- copied from LpVariable, but with a different constructor
     def __neg__(self):
         return - AffineExpression(self)
@@ -89,6 +95,22 @@ class Variable(pulp.LpVariable):
 
     def __div__(self, other):
         return AffineExpression(self)/other
+
+def abs_value(var: Variable) -> Variable:
+    problem = var._problem
+    z = problem.make_var(f'abs({var.name})_{problem._synth_var()}', cat=pulp.LpInteger)
+    problem.addConstraint(var <= z, f'{var.name} <= abs({var.name}) _{problem._synth_var()}')
+    problem.addConstraint(-z <= var, f'- abs({var.name}) <= {var.name} _{problem._synth_var()}')
+    return z
+
+def prefer_between(x: Variable, a: int, b: int) -> Variable:
+    """
+    Produces a variable that is
+     - 0 when x lies within [a, b]
+     - negative otherwise, and more negative with distance from [a, b]
+    """
+    return (b - a) - abs_value(x - a) - abs_value(x - b)
+
 
 def negate(x: Variable):
     assert_binary(x)

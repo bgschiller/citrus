@@ -101,13 +101,15 @@ p.addConstraint(take_a_vacation)
 ## Classes
 
 - `Variable` is a subclass of `pulp.LpVariable`. It adds the following methods:
+
   - (classmethod) `from_lp_var`. Upgrade a `pulp.LpVariable` to a Variable.
   - `__or__(self, other)` Compute the `logical_or` of two binary `Variable`s
   - `__and__(self, other)` Compute the `logical_and` of two binary `Variable`s
   - `__and__(self, other)` Compute the `logical_and` of two binary `Variable`s
+  - `__abs__(self)` Create a new Variable restricted to the absolute value of this one.
 
 - `Problem` A subclass of `pulp.LpProblem`. It adds the following method
-  - `make_var()` accepts same arguments as `pulp.LpVariable`, but produces a `Variable`
+  - `make_var()` accepts the same arguments as `pulp.LpVariable`, but produces a `Variable`
 
 ## Functions
 

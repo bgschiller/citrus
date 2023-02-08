@@ -224,3 +224,17 @@ def test_constants_count_as_binary():
     a.fixValue()
     assert_binary(a)
 
+def test_abs_value():
+    p = Problem('abs value', pulp.LpMinimize)
+    a = p.make_var('a', cat=pulp.LpContinuous)
+    b = p.make_var('b', cat=pulp.LpContinuous)
+
+    p.addConstraint(abs(a - b) <= 5, '|a - b| <= 5')
+    p.addConstraint(a >= 10, 'a >= 10')
+    p.addConstraint(abs(b) >= 0) # not active, just making sure we can apply abs to variables
+
+    p.setObjective(b)
+    p.solve()
+    assert pulp.LpStatus[p.status] == 'Optimal'
+    assert a.value() == 10
+    assert b.value() == 5
