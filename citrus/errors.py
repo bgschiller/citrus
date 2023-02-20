@@ -21,5 +21,5 @@ def assert_same_problem_binary(x, y):
     return x # return for use in reduce(assert_same_problem, (x, y, z))
 
 
-def assert_same_problem(*xs):
+def assert_same_problem(xs):
     return reduce(assert_same_problem_binary, xs)

@@ -9,7 +9,11 @@ class Problem(pulp.LpProblem):
         self._synth_var_ix = 0
 
     def make_var(self, *args, **kwargs):
-        return Variable(*args, **kwargs, problem=self)
+        v = Variable(*args, **kwargs, problem=self)
+        if len(v.name) > 255:
+            # conforming .lp files have variables less than 255 characters long
+            v.name = v.name[:40] + '...' + v.name[-40:]
+        return v
 
     def _synth_var(self):
         name = str(self._synth_var_ix)
@@ -60,13 +64,13 @@ class Variable(pulp.LpVariable):
         return lp_var
 
     def __or__(self, other):
-        return logical_or(self, other)
+        return logical_or([self, other])
 
     def __and__(self, other):
-        return logical_and(self, other)
+        return logical_and([self, other])
 
     def __xor__(self, other):
-        return logical_xor(self, other)
+        return logical_xor([self, other])
 
     def __abs__(self):
         return abs_value(self)
@@ -98,9 +102,10 @@ class Variable(pulp.LpVariable):
 
 def abs_value(var: Variable) -> Variable:
     problem = var._problem
-    z = problem.make_var(f'abs({var.name})_{problem._synth_var()}', cat=pulp.LpInteger)
-    problem.addConstraint(var <= z, f'{var.name} <= abs({var.name}) _{problem._synth_var()}')
-    problem.addConstraint(-z <= var, f'- abs({var.name}) <= {var.name} _{problem._synth_var()}')
+    tag = problem._synth_var()
+    z = problem.make_var(f'abs({var.name})_{tag}', cat=pulp.LpInteger)
+    problem.addConstraint(var <= z, f'abs_support_1_{tag}')
+    problem.addConstraint(-z <= var, f'abs_support_2_{tag}')
     return z
 
 def prefer_between(x: Variable, a: int, b: int) -> Variable:
@@ -115,94 +120,110 @@ def prefer_between(x: Variable, a: int, b: int) -> Variable:
 def negate(x: Variable):
     assert_binary(x)
     problem = x._problem
-    y = problem.make_var('(NOT {})_{}'.format(x.name, problem._synth_var()), cat=pulp.LpBinary)
-    problem.addConstraint(y == 1 - x)
+    tag = problem._synth_var()
+    y = problem.make_var('(NOT {})_{}'.format(x.name, tag), cat=pulp.LpBinary)
+    problem.addConstraint(y == 1 - x, f"negate_support_{tag}")
     return y
 
-def logical_and(*xs):
+def logical_and(xs):
     """
     produce a variable that represents x && y
 
     That variable can then be used in constraints and the objective func.
     """
+    xs = list(xs)
     if len(xs) == 1:
         return xs[0]
 
-    assert_same_problem(*xs)
+    assert_same_problem(xs)
     for x in xs:
         assert_binary(x)
 
     model = x._problem
 
-    name = '(' + '_AND_'.join(x.name for x in xs) + f')_{model._synth_var()}'
+    tag = model._synth_var()
+    name = '(' + '_AND_'.join(x.name for x in xs) + f')_{tag}'
     z = model.make_var(name, cat=pulp.LpBinary)
-    model.addConstraint(z >= pulp.lpSum(xs) - len(xs) + 1)
-    for x in xs:
-        model.addConstraint(z <= x)
+    model.addConstraint(z >= pulp.lpSum(xs) - len(xs) + 1, f"logical_and_support_{tag}")
+    for ix, x in enumerate(xs):
+        model.addConstraint(z <= x, f"logical_and_support_{ix}_{tag}")
     return z
 
-def logical_or(*xs):
+def logical_or(xs):
+    xs = list(xs)
     if len(xs) == 1:
         return xs[0]
 
-    assert_same_problem(*xs)
+    assert_same_problem(xs)
     for x in xs:
         assert_binary(x)
 
     model = x._problem
 
-    name = '(' + '_OR_'.join(x.name for x in xs) + f')_{model._synth_var()}'
+    tag = model._synth_var()
+    name = '(' + '_OR_'.join(x.name for x in xs) + f')_{tag}'
     z = model.make_var(name, cat=pulp.LpBinary)
-    model.addConstraint(z <= pulp.lpSum(xs))
-    for x in xs:
-        model.addConstraint(z >= x)
+    model.addConstraint(z <= pulp.lpSum(xs), f"logical_or_support_{tag}")
+    for ix, x in enumerate(xs):
+        model.addConstraint(z >= x, f"logical_or_support_{ix}_{tag}")
     return z
 
 def logical_xor(x: Variable, y: Variable):
-    assert_same_problem(x, y)
+    assert_same_problem([x, y])
     assert_binary(x)
     assert_binary(y)
 
     model = x._problem
 
-    z = model.make_var('({} XOR {})_{}'.format(x.name, y.name, model._synth_var()), cat=pulp.LpBinary)
-    model.addConstraint(z <= x + y)
-    model.addConstraint(z >= x - y)
-    model.addConstraint(z >= y - x)
-    model.addConstraint(z <= 2 - x - y)
+    tag = model._synth_var()
+    z = model.make_var('({} XOR {})_{}'.format(x.name, y.name, tag), cat=pulp.LpBinary)
+    model.addConstraint(z <= x + y, f"logical_xor_support_0_{tag}")
+    model.addConstraint(z >= x - y, f"logical_xor_support_1_{tag}")
+    model.addConstraint(z >= y - x, f"logical_xor_support_2_{tag}")
+    model.addConstraint(z <= 2 - x - y, f"logical_xor_support_3_{tag}")
 
     return z
 
 def implies(x: Variable, y: Variable):
-    assert_same_problem(x, y)
+    assert_same_problem([x, y])
     assert_binary(x)
     assert_binary(y)
 
     model = x._problem
 
-    z = model.make_var('({} implies {})_{}'.format(x.name, y.name, model._synth_var()), cat=pulp.LpBinary)
-    model.addConstraint(z <= 1 - x + y)
-    model.addConstraint(z >= 1 - x)
-    model.addConstraint(z >= y)
+    tag = model._synth_var()
+    z = model.make_var('({} implies {})_{}'.format(x.name, y.name, tag), cat=pulp.LpBinary)
+    model.addConstraint(z <= 1 - x + y, f"implies_support_0_{tag}")
+    model.addConstraint(z >= 1 - x, f"implies_support_1_{tag}")
+    model.addConstraint(z >= y, f"implies_support_2_{tag}")
     return z
 
 
-def minimum(*xs: Variable, name=None):
+def minimum(xs, name=None):
+    xs = list(xs)
     if len(xs) == 1:
         return xs[0]
-    assert_same_problem(*xs)
+    assert_same_problem(xs)
     model = xs[0]._problem
-    m = model.make_var('{}_{}'.format(name or 'min', model._synth_var()), cat=pulp.LpContinuous)
-    for x in xs:
-        model.addConstraint(m <= x)
+    tag = model._synth_var()
+    m = model.make_var('{}_{}'.format(name or 'min', tag), cat=pulp.LpContinuous)
+    for ix, x in enumerate(xs):
+        model.addConstraint(m <= x, f"min_support_{ix}_{tag}")
     return m
 
-def maximum(*xs: Variable, name=None):
+def maximum(xs, name=None):
+    xs = list(xs)
     if len(xs) == 1:
         return xs[0]
-    assert_same_problem(*xs)
+    assert_same_problem(xs)
     model = xs[0]._problem
-    m = model.make_var('{}_{}'.format(name or 'max', model._synth_var()), cat=pulp.LpContinuous)
-    for x in xs:
-        model.addConstraint(m >= x)
+    tag = model._synth_var()
+    m = model.make_var('{}_{}'.format(name or 'max', tag), cat=pulp.LpContinuous)
+    for ix, x in enumerate(xs):
+        model.addConstraint(m >= x, f"max_support_{ix}_{tag}")
     return m
+
+def lpSum(xs):
+    assert_same_problem(xs)
+    total = pulp.lpSum(xs)
+    return AffineExpression(xs, xs[0]._problem)

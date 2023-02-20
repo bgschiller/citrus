@@ -22,10 +22,10 @@ def test_that_logical_and_produces_constrained_value():
     f1 = p.make_var('f1', cat=pulp.LpBinary)
     f2 = p.make_var('f2', cat=pulp.LpBinary)
 
-    tt = logical_and(t1, t2)
-    tf = logical_and(t1, f1)
-    ft = logical_and(f1, t1)
-    ff = logical_and(f1, f2)
+    tt = logical_and([t1, t2])
+    tf = logical_and([t1, f1])
+    ft = logical_and([f1, t1])
+    ff = logical_and([f1, f2])
     p.addConstraint(t1 == 1)
     p.addConstraint(t2 == 1)
     p.addConstraint(f1 == 0)
@@ -42,10 +42,10 @@ def test_that_anding_with_itself_is_okay():
     t = p.make_var('t', cat=pulp.LpBinary)
     f = p.make_var('f', cat=pulp.LpBinary)
 
-    tt = logical_and(t, t)
-    tf = logical_and(t, f)
-    ft = logical_and(f, t)
-    ff = logical_and(f, f)
+    tt = logical_and([t, t])
+    tf = logical_and([t, f])
+    ft = logical_and([f, t])
+    ff = logical_and([f, f])
     p.addConstraint(t == 1)
     p.addConstraint(f == 0)
     p.solve()
@@ -60,10 +60,10 @@ def test_that_logical_or_produces_constrained_value():
     t = p.make_var('t', cat=pulp.LpBinary)
     f = p.make_var('f', cat=pulp.LpBinary)
 
-    tt = logical_or(t, t)
-    tf = logical_or(t, f)
-    ft = logical_or(f, t)
-    ff = logical_or(f, f)
+    tt = logical_or([t, t])
+    tf = logical_or([t, f])
+    ft = logical_or([f, t])
+    ff = logical_or([f, f])
     p.addConstraint(t == 1)
     p.addConstraint(f == 0)
     p.solve()
@@ -79,9 +79,9 @@ def test_that_funcs_throws_on_non_binary_variable():
     y = p.make_var('y', cat=pulp.LpInteger)
 
     with pytest.raises(NonBinaryVariableError):
-        logical_and(x, y)
+        logical_and([x, y])
     with pytest.raises(NonBinaryVariableError):
-        logical_or(x, y)
+        logical_or([x, y])
     with pytest.raises(NonBinaryVariableError):
         logical_xor(x, y)
     with pytest.raises(NonBinaryVariableError):
@@ -94,9 +94,9 @@ def test_that_vars_from_diff_problems_raise_error():
     y = b.make_var('y', cat=pulp.LpBinary)
 
     with pytest.raises(CitrusError):
-        logical_or(x, y)
+        logical_or([x, y])
     with pytest.raises(CitrusError):
-        logical_and(x, y)
+        logical_and([x, y])
     with pytest.raises(CitrusError):
         logical_xor(x, y)
     with pytest.raises(CitrusError):
@@ -108,7 +108,7 @@ def test_that_from_lp_var_works():
     f = p.make_var('f', cat=pulp.LpBinary)
     t = Variable.from_lp_var(t, p)
 
-    tf = logical_and(t, f)
+    tf = logical_and([t, f])
     p.addConstraint(t == 1)
     p.addConstraint(f == 0)
     p.solve()
@@ -122,10 +122,10 @@ def test_more_than_two_args_or():
     f = p.make_var('f', cat=pulp.LpBinary)
     f2 = p.make_var('f2', cat=pulp.LpBinary)
 
-    ttt = logical_or(t, t, t2)
-    tff = logical_or(t, f, f2)
-    ftf = logical_or(f, t, f2)
-    ff2f = logical_or(f, f, f2)
+    ttt = logical_or([t, t, t2])
+    tff = logical_or([t, f, f2])
+    ftf = logical_or([f, t, f2])
+    ff2f = logical_or([f, f, f2])
 
     p.addConstraint(t == 1)
     p.addConstraint(f == 0)
@@ -145,10 +145,10 @@ def test_more_than_two_args_and():
     f = p.make_var('f', cat=pulp.LpBinary)
     f2 = p.make_var('f2', cat=pulp.LpBinary)
 
-    ttt = logical_and(t, t, t2)
-    tff = logical_and(t, f, f2)
-    ftf = logical_and(f, t, f2)
-    ff2f = logical_and(f, f, f2)
+    ttt = logical_and([t, t, t2])
+    tff = logical_and([t, f, f2])
+    ftf = logical_and([f, t, f2])
+    ff2f = logical_and([f, f, f2])
 
     p.addConstraint(t == 1)
     p.addConstraint(f == 0)
@@ -174,7 +174,7 @@ def test_that_minimum_is_truly_min():
     z = p.make_var('z', cat=pulp.LpContinuous)
     p.addConstraint(z <= 15)
 
-    m = minimum(x, y, z)
+    m = minimum([x, y, z])
     p.setObjective(x + y + z + m)
 
     p.solve()
@@ -193,7 +193,7 @@ def test_that_maximum_is_truly_max():
     z = p.make_var('z', cat=pulp.LpContinuous)
     p.addConstraint(z >= 15)
 
-    m = maximum(x, y, z)
+    m = maximum([x, y, z])
     p.setObjective(x + y + z + m)
 
     p.solve()
@@ -259,7 +259,7 @@ def test_maximum_operates_on_affine_expr():
     p.addConstraint(b >= 0, 'pos b')
     p.addConstraint(c >= 0, 'pos c')
 
-    largest = maximum(a, b, c)
+    largest = maximum([a, b, c])
     p.setObjective(largest)
     p.solve()
     assert pulp.LpStatus[p.status] == 'Optimal'
