@@ -1,35 +1,65 @@
-from functools import reduce
+from typing import Hashable, Iterable
+import warnings
+import hashlib
+import inspect
 import pulp
 from .errors import assert_binary, assert_same_problem, MissingProblemReference
 
+class NameMapping:
+    def __init__(self):
+        self._long_to_short = {}
+        self._short_to_long = {}
+    def get_short_name(self, var):
+        return self._short_to_long[var]
+    def get_long_name(self, name):
+        return self._long_to_short[name]
+    def create_short_name(self, long_name, prefix='x_'):
+        short_name = self._long_to_short.get(long_name, None)
+        if short_name is None:
+            short_name = prefix + hashlib.sha1(repr(long_name).encode('utf-8')).hexdigest()
+            self.add(long=long_name, short=short_name)
+        else:
+            warnings.warn(f"Long name {long_name} already has a short name {short_name}")
+        return short_name
+    def add(self, *, long, short):
+        self._long_to_short[long] = short
+        self._short_to_long[short] = long
+    def remove(self, *, short):
+        long = self._short_to_long.get(short, None)
+        if long is not None:
+            del self._long_to_short[long]
+            del self._short_to_long[short]
+    def __iter__(self):
+        return iter(self._long_to_short.items())
+
+VAR_SIGNATURE = inspect.signature(pulp.LpVariable)
+DICTS_SIGNATURE = inspect.signature(pulp.LpVariable.dicts)
 
 class Problem(pulp.LpProblem):
     def __init__(self, *args ,**kwargs):
         super().__init__(*args, **kwargs)
         self._synth_var_ix = 0
+        self.name_mapping = NameMapping()
 
     def make_var(self, *args, **kwargs):
-        v = Variable(*args, **kwargs, problem=self)
-        if len(v.name) > 255:
-            # conforming .lp files have variables less than 255 characters long
-            v.name = v.name[:40] + '...' + v.name[-40:]
-        return v
+        return Variable(*args, **kwargs, problem=self)
 
     def _synth_var(self):
         name = str(self._synth_var_ix)
         self._synth_var_ix += 1
         return name
 
-    def dicts(self, *args, **kwargs):
-        ds = pulp.LpVariable.dicts(*args, **kwargs)
-        return self._walk_dicts(ds)
+    def dicts(self, indices: Iterable[Hashable], **kwargs):
+        d = {}
+        for k in indices:
+            d[k] = self.make_var(long_name=k, **kwargs)
+        return d
 
-    def _walk_dicts(self, ds):
-        if isinstance(ds, pulp.LpVariable):
-            return Variable.from_lp_var(ds, self)
-        if isinstance(ds, dict):
-            return { k: self._walk_dicts(v) for k, v in ds.items() }
-        raise ValueError('Expected a dict or LpVariable. received {}'.format(ds))
+    def addConstraint(self, constraint, name=None):
+        if name is None:
+            name = self._synth_var()
+        short = self.name_mapping.create_short_name(name, prefix='constraint_')
+        super().addConstraint(constraint, name=short)
 
 class AffineExpression(pulp.LpAffineExpression):
     def __init__(self, *args, **kwargs):
@@ -53,15 +83,11 @@ class AffineExpression(pulp.LpAffineExpression):
 
 
 class Variable(pulp.LpVariable):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, long_name, **kwargs):
         self._problem = kwargs.pop('problem')
-        super().__init__(*args, **kwargs)
-
-    @classmethod
-    def from_lp_var(cls, lp_var: pulp.LpVariable, problem: Problem):
-        lp_var.__class__ = cls
-        lp_var._problem = problem
-        return lp_var
+        self.long_name = long_name
+        short = self._problem.name_mapping.create_short_name(long_name)
+        super().__init__(**kwargs, name=short)
 
     def __or__(self, other):
         return logical_or([self, other])
@@ -70,7 +96,7 @@ class Variable(pulp.LpVariable):
         return logical_and([self, other])
 
     def __xor__(self, other):
-        return logical_xor([self, other])
+        return logical_xor(self, other)
 
     def __abs__(self):
         return abs_value(self)
@@ -226,4 +252,4 @@ def maximum(xs, name=None):
 def lpSum(xs):
     assert_same_problem(xs)
     total = pulp.lpSum(xs)
-    return AffineExpression(xs, xs[0]._problem)
+    return AffineExpression(total, xs[0]._problem)

@@ -1,4 +1,5 @@
 import pytest
+import io
 import pulp
 from .core import Problem, Variable, negate, logical_and, logical_or, minimum, maximum, logical_xor, implies
 from .errors import NonBinaryVariableError, CitrusError, assert_binary
@@ -101,19 +102,6 @@ def test_that_vars_from_diff_problems_raise_error():
         logical_xor(x, y)
     with pytest.raises(CitrusError):
         implies(x, y)
-
-def test_that_from_lp_var_works():
-    p = Problem('anding with self', pulp.LpMinimize)
-    t = pulp.LpVariable('t', cat=pulp.LpBinary)
-    f = p.make_var('f', cat=pulp.LpBinary)
-    t = Variable.from_lp_var(t, p)
-
-    tf = logical_and([t, f])
-    p.addConstraint(t == 1)
-    p.addConstraint(f == 0)
-    p.solve()
-    assert pulp.LpStatus[p.status] == 'Optimal'
-    assert tf.value() == 0
 
 def test_more_than_two_args_or():
     p = Problem('logical_or tests', pulp.LpMinimize)
@@ -285,3 +273,18 @@ def test_abs_value():
     assert pulp.LpStatus[p.status] == 'Optimal'
     assert a.value() == 10
     assert b.value() == 5
+
+def test_problems_with_long_names_can_be_written_to_lp_files():
+    p = Problem('long name test', pulp.LpMinimize)
+    a = p.make_var('a' * 260, cat=pulp.LpContinuous)
+    b = p.make_var('b' * 260, cat=pulp.LpContinuous)
+    p.addConstraint(a + b <= 12, f'{a} + {b} <= 12')
+    p.addConstraint(a >= 0, 'pos a')
+    p.addConstraint(b >= 0, 'pos b')
+    p.setObjective(a + b) 
+    p.writeLP('long_name_test.lp')
+    with open('long_name_test.lp', 'r') as f:
+        lp_file_content = f.read()
+    assert 'long_name_test' in lp_file_content
+    assert 'a' * 260 not in lp_file_content
+    assert not any(len(line) > 100 for line in lp_file_content.split('\n'))
