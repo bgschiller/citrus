@@ -1,5 +1,4 @@
 from typing import Hashable, Iterable
-import warnings
 import hashlib
 import inspect
 import pulp
@@ -18,8 +17,6 @@ class NameMapping:
         if short_name is None:
             short_name = prefix + hashlib.sha1(repr(long_name).encode('utf-8')).hexdigest()
             self.add(long=long_name, short=short_name)
-        else:
-            warnings.warn(f"Long name {long_name} already has a short name {short_name}")
         return short_name
     def add(self, *, long, short):
         self._long_to_short[long] = short
@@ -250,6 +247,7 @@ def maximum(xs, name=None):
     return m
 
 def lpSum(xs):
+    xs = list(xs)
     assert_same_problem(xs)
     total = pulp.lpSum(xs)
     return AffineExpression(total, xs[0]._problem)
